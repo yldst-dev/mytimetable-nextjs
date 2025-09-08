@@ -62,11 +62,133 @@ export class NotificationManager {
 
     try {
       this.permission = await Notification.requestPermission();
+      
+      if (this.permission === 'granted') {
+        await this.subscribeToPush();
+      }
+      
       return this.permission;
     } catch (error) {
       console.error('알림 권한 요청 실패:', error);
       return 'denied';
     }
+  }
+
+  async subscribeToPush(): Promise<boolean> {
+    try {
+      if (!('serviceWorker' in navigator)) {
+        console.warn('Service Worker not supported');
+        return false;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      
+      // VAPID 공개 키 가져오기
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        console.warn('VAPID public key not configured');
+        return false;
+      }
+
+      // 기존 구독 확인
+      let subscription = await registration.pushManager.getSubscription();
+      
+      if (!subscription) {
+        // 새 구독 생성
+        const applicationServerKey = this.urlBase64ToUint8Array(vapidPublicKey);
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey as BufferSource
+        });
+      }
+
+      // 서버에 구독 정보 저장
+      const response = await fetch('/api/push-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: this.arrayBufferToBase64(subscription.getKey('p256dh')!),
+            auth: this.arrayBufferToBase64(subscription.getKey('auth')!)
+          },
+          userAgent: navigator.userAgent
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('Push subscription saved:', result.subscriptionId);
+        return true;
+      } else {
+        console.error('Failed to save push subscription:', result.error);
+        return false;
+      }
+
+    } catch (error) {
+      console.error('Error subscribing to push notifications:', error);
+      return false;
+    }
+  }
+
+  async unsubscribeFromPush(): Promise<boolean> {
+    try {
+      if (!('serviceWorker' in navigator)) {
+        return false;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+
+      if (subscription) {
+        // 서버에서 구독 제거
+        await fetch('/api/push-subscription', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            endpoint: subscription.endpoint
+          })
+        });
+
+        // 브라우저에서 구독 제거
+        await subscription.unsubscribe();
+        console.log('Push subscription removed');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error unsubscribing from push notifications:', error);
+      return false;
+    }
+  }
+
+  private urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
   }
 
   async showNotification(config: NotificationConfig): Promise<boolean> {

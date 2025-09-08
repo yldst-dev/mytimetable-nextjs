@@ -35,9 +35,29 @@ export default function DevToolsPanel() {
     setNotificationStatus(getNotificationStatus());
   };
 
-  const handleScheduleAll = () => {
-    notificationScheduler.scheduleNotifications(scheduleData);
-    setUpcomingNotifications(getUpcomingNotifications(scheduleData, 48));
+  const handleScheduleAll = async () => {
+    try {
+      // 서버에 알림 스케줄링 요청
+      const response = await fetch('/api/schedule-notifications', {
+        method: 'POST'
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log(`✅ ${result.scheduledCount}개의 알림이 데이터베이스에 스케줄되었습니다.`);
+        // 로컬 스케줄러도 실행 (개발 모드용)
+        notificationScheduler.scheduleNotifications(scheduleData);
+        setUpcomingNotifications(getUpcomingNotifications(scheduleData, 48));
+      } else {
+        console.error('알림 스케줄링 실패:', result.error);
+      }
+    } catch (error) {
+      console.error('알림 스케줄링 요청 실패:', error);
+      // 폴백: 로컬 스케줄링
+      notificationScheduler.scheduleNotifications(scheduleData);
+      setUpcomingNotifications(getUpcomingNotifications(scheduleData, 48));
+    }
   };
 
   const handleTestNotification = async () => {
@@ -71,7 +91,15 @@ export default function DevToolsPanel() {
     }
   };
 
+  // 프로덕션 환경에서는 개발 도구 숨김
   if (process.env.NEXT_PUBLIC_APP_ENV === 'production') {
+    return null;
+  }
+
+  // PWA 모드에서 알림이 활성화된 경우에도 숨김
+  if (process.env.NEXT_PUBLIC_PWA_ENABLED === 'true' && 
+      process.env.NEXT_PUBLIC_ENABLE_NOTIFICATIONS === 'true' &&
+      typeof window !== 'undefined' && window.isSecureContext) {
     return null;
   }
 

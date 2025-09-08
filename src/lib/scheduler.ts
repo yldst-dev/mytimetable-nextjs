@@ -181,10 +181,38 @@ export class NotificationScheduler {
     const now = new Date();
     const limitTime = new Date(now.getTime() + limitHours * 60 * 60 * 1000);
 
-    return reminders.filter((reminder) => {
-      return reminder.reminderTime.getTime() > now.getTime() && 
-             reminder.reminderTime.getTime() <= limitTime.getTime();
-    }).sort((a, b) => a.reminderTime.getTime() - b.reminderTime.getTime());
+    const upcomingReminders: ClassReminder[] = [];
+
+    reminders.forEach((reminder) => {
+      // 10분 전 알림 추가
+      if (reminder.reminderTime.getTime() > now.getTime() && 
+          reminder.reminderTime.getTime() <= limitTime.getTime()) {
+        upcomingReminders.push({
+          ...reminder,
+          id: `${reminder.id}-reminder`,
+          classInfo: {
+            ...reminder.classInfo,
+            name: `🔔 ${reminder.classInfo.name} (10분전)`
+          }
+        });
+      }
+
+      // 정각 출석 알림 추가
+      if (reminder.attendanceCheckTime.getTime() > now.getTime() && 
+          reminder.attendanceCheckTime.getTime() <= limitTime.getTime()) {
+        upcomingReminders.push({
+          ...reminder,
+          id: `${reminder.id}-attendance`,
+          reminderTime: reminder.attendanceCheckTime, // 정각 시간으로 설정
+          classInfo: {
+            ...reminder.classInfo,
+            name: `📍 ${reminder.classInfo.name} (출석확인)`
+          }
+        });
+      }
+    });
+
+    return upcomingReminders.sort((a, b) => a.reminderTime.getTime() - b.reminderTime.getTime());
   }
 
   async testNotificationNow(classInfo: { name: string; room: string; professor: string }): Promise<void> {
