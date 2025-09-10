@@ -4,6 +4,8 @@ import "./globals.css";
 import PWAWrapper from "@/components/pwa/PWAWrapper";
 import DevToolsPanel from "@/components/dev/DevToolsPanel";
 import NotificationPermissionPrompt from "@/components/pwa/NotificationPermissionPrompt";
+import CSSLoadingFallback from "@/components/utils/CSSLoadingFallback";
+import DevRefreshHelper from "@/components/utils/DevRefreshHelper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -74,11 +76,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <PWAWrapper>
-          {children}
-          <NotificationPermissionPrompt />
-          <DevToolsPanel />
-        </PWAWrapper>
+        <CSSLoadingFallback>
+          <PWAWrapper>
+            {children}
+            <NotificationPermissionPrompt />
+            <DevToolsPanel />
+          </PWAWrapper>
+          <DevRefreshHelper />
+        </CSSLoadingFallback>
       </body>
     </html>
   );

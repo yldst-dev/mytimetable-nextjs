@@ -1,4 +1,7 @@
-const CACHE_NAME = 'mytimetable-v1';
+const CACHE_NAME = 'mytimetable-v2';
+const STATIC_CACHE = 'static-v2';
+const DYNAMIC_CACHE = 'dynamic-v2';
+
 const urlsToCache = [
   '/',
   '/manifest.json',
@@ -8,26 +11,104 @@ const urlsToCache = [
 
 // 서비스워커 설치
 self.addEventListener('install', (event) => {
+  console.log('[SW] Install event');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
+        console.log('[SW] Caching app shell');
         return cache.addAll(urlsToCache);
+      })
+      .then(() => {
+        console.log('[SW] Skip waiting');
+        return self.skipWaiting();
       })
   );
 });
 
-// 요청 처리
+// 서비스워커 활성화
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Activate event');
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME && cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
+            console.log('[SW] Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => {
+      console.log('[SW] Claiming clients');
+      return self.clients.claim();
+    })
+  );
+});
+
+// 요청 처리 - Network First for CSS, Cache First for others
 self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+  
+  // CSS 파일에 대해서는 Network First 전략 사용
+  if (request.destination === 'style' || url.pathname.endsWith('.css')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(STATIC_CACHE)
+              .then((cache) => {
+                cache.put(request, responseClone);
+              });
+          }
+          return response;
+        })
+        .catch(() => {
+          // 네트워크 실패시 캐시에서 가져오기
+          return caches.match(request);
+        })
+    );
+    return;
+  }
+
+  // API 요청은 Network First
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(request)
+        .catch(() => {
+          return new Response(
+            JSON.stringify({ error: 'Network unavailable' }), 
+            { status: 503, headers: { 'Content-Type': 'application/json' } }
+          );
+        })
+    );
+    return;
+  }
+
+  // 다른 모든 요청은 Cache First
   event.respondWith(
-    caches.match(event.request)
+    caches.match(request)
       .then((response) => {
-        // 캐시에서 찾으면 반환, 없으면 네트워크 요청
         if (response) {
           return response;
         }
-        return fetch(event.request);
-      }
-    )
+
+        return fetch(request)
+          .then((response) => {
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+
+            const responseToCache = response.clone();
+            caches.open(DYNAMIC_CACHE)
+              .then((cache) => {
+                cache.put(request, responseToCache);
+              });
+
+            return response;
+          });
+      })
   );
 });
 
