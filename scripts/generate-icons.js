@@ -13,26 +13,26 @@ if (!fs.existsSync(iconsDir)) {
   fs.mkdirSync(iconsDir, { recursive: true });
 }
 
-// SVG 기반 아이콘 생성 (개발용)
+// SVG 기반 아이콘 생성 (개발용 - 검정색 배경)
 const generateIconSVG = (size) => `
 <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#1f1f1f;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
     </linearGradient>
   </defs>
   <rect width="${size}" height="${size}" rx="${size * 0.2}" fill="url(#grad1)"/>
   <g transform="translate(${size * 0.2}, ${size * 0.2})">
-    <rect x="0" y="0" width="${size * 0.6}" height="${size * 0.1}" fill="white" opacity="0.9"/>
-    <rect x="0" y="${size * 0.15}" width="${size * 0.6}" height="${size * 0.1}" fill="white" opacity="0.7"/>
-    <rect x="0" y="${size * 0.3}" width="${size * 0.6}" height="${size * 0.1}" fill="white" opacity="0.9"/>
-    <rect x="0" y="${size * 0.45}" width="${size * 0.6}" height="${size * 0.1}" fill="white" opacity="0.5"/>
-    <circle cx="${size * 0.1}" cy="${size * 0.05}" r="${size * 0.02}" fill="white"/>
-    <circle cx="${size * 0.1}" cy="${size * 0.2}" r="${size * 0.02}" fill="white"/>
-    <circle cx="${size * 0.1}" cy="${size * 0.35}" r="${size * 0.02}" fill="white"/>
+    <rect x="0" y="0" width="${size * 0.6}" height="${size * 0.1}" fill="#3b82f6" opacity="0.9"/>
+    <rect x="0" y="${size * 0.15}" width="${size * 0.6}" height="${size * 0.1}" fill="#60a5fa" opacity="0.7"/>
+    <rect x="0" y="${size * 0.3}" width="${size * 0.6}" height="${size * 0.1}" fill="#3b82f6" opacity="0.9"/>
+    <rect x="0" y="${size * 0.45}" width="${size * 0.6}" height="${size * 0.1}" fill="#60a5fa" opacity="0.5"/>
+    <circle cx="${size * 0.1}" cy="${size * 0.05}" r="${size * 0.02}" fill="#3b82f6"/>
+    <circle cx="${size * 0.1}" cy="${size * 0.2}" r="${size * 0.02}" fill="#60a5fa"/>
+    <circle cx="${size * 0.1}" cy="${size * 0.35}" r="${size * 0.02}" fill="#3b82f6"/>
   </g>
-  <text x="${size * 0.5}" y="${size * 0.85}" text-anchor="middle" fill="white" font-size="${size * 0.1}" font-family="Arial, sans-serif" font-weight="bold">시간표</text>
+  <text x="${size * 0.5}" y="${size * 0.85}" text-anchor="middle" fill="#3b82f6" font-size="${size * 0.1}" font-family="Arial, sans-serif" font-weight="bold">시간표</text>
 </svg>`;
 
 // README 파일 생성
