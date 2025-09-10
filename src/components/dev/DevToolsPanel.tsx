@@ -61,11 +61,53 @@ export default function DevToolsPanel() {
   };
 
   const handleTestNotification = async () => {
-    await testNotification({
-      name: '테스트 수업',
-      room: '테스트 강의실',
-      professor: '테스트 교수'
-    });
+    console.log('🧪 테스트 알림 발송 시작...');
+    try {
+      await testNotification({
+        name: '테스트 수업',
+        room: '테스트 강의실',
+        professor: '테스트 교수'
+      });
+      console.log('✅ 테스트 알림 발송 완료');
+    } catch (error) {
+      console.error('❌ 테스트 알림 발송 실패:', error);
+    }
+  };
+
+  const handleTestImmediateNotification = async () => {
+    console.log('🚀 즉시 알림 테스트...');
+    const status = getNotificationStatus();
+    console.log('알림 상태:', status);
+    
+    if (!status.canShow) {
+      alert('알림을 표시할 수 없습니다. 브라우저 설정을 확인해주세요.');
+      return;
+    }
+
+    try {
+      const result = await notificationManager.showNotification({
+        title: '🧪 즉시 테스트 알림',
+        body: '이 알림이 보인다면 설정이 정상입니다!',
+        icon: '/icons/icon-192x192.png',
+        tag: 'immediate-test'
+      });
+      
+      if (result) {
+        console.log('✅ 즉시 알림 성공');
+      } else {
+        console.log('⚠️ 알림 실패 - 시뮬레이션 모드로 전환');
+        await notificationManager.simulateNotification({
+          title: '🧪 시뮬레이션 테스트 알림',
+          body: '시뮬레이션 모드에서 실행 중입니다.',
+          icon: '/icons/icon-192x192.png',
+          tag: 'simulation-test'
+        });
+      }
+    } catch (error) {
+      console.error('❌ 즉시 알림 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      alert('알림 발송 실패: ' + errorMessage);
+    }
   };
 
   const handleClearAll = () => {
@@ -169,6 +211,14 @@ export default function DevToolsPanel() {
                       알림 권한 요청
                     </Button>
                     <Button 
+                      onClick={handleTestImmediateNotification} 
+                      variant="default"
+                      className="h-auto p-4 flex-col bg-green-600 hover:bg-green-700"
+                    >
+                      🚀
+                      즉시 알림 테스트
+                    </Button>
+                    <Button 
                       onClick={handleScheduleAll} 
                       variant="outline"
                       className="h-auto p-4 flex-col"
@@ -184,6 +234,9 @@ export default function DevToolsPanel() {
                       🧪
                       테스트 알림
                     </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-3">
                     <Button 
                       onClick={handleClearAll} 
                       variant="destructive"

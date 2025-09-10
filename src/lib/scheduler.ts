@@ -138,8 +138,20 @@ export class NotificationScheduler {
     
     const reminders = this.createReminderFromSchedule(scheduleData);
     const now = new Date();
+    
+    console.log('🔍 알림 스케줄링 디버깅:');
+    console.log('현재 시간:', now.toLocaleString('ko-KR'));
+    console.log('총 수업 개수:', reminders.length);
+
+    let scheduledCount = 0;
 
     reminders.forEach((reminder) => {
+      console.log(`\n📚 수업: ${reminder.classInfo.name}`);
+      console.log(`📅 요일: ${reminder.classInfo.day}`);
+      console.log(`⏰ 시간: ${reminder.time}`);
+      console.log(`🔔 10분전 알림: ${reminder.reminderTime.toLocaleString('ko-KR')}`);
+      console.log(`📍 정시 알림: ${reminder.attendanceCheckTime.toLocaleString('ko-KR')}`);
+      
       if (reminder.reminderTime.getTime() > now.getTime()) {
         const reminderNotification: ScheduledNotification = {
           id: `reminder-${reminder.id}`,
@@ -150,6 +162,10 @@ export class NotificationScheduler {
         };
 
         this.notificationManager.scheduleNotification(reminderNotification);
+        console.log(`✅ 10분전 알림 예약됨 (${Math.round((reminder.reminderTime.getTime() - now.getTime()) / 1000 / 60)}분 후)`);
+        scheduledCount++;
+      } else {
+        console.log(`❌ 10분전 알림 시간 지남`);
       }
 
       if (reminder.attendanceCheckTime.getTime() > now.getTime()) {
@@ -162,10 +178,25 @@ export class NotificationScheduler {
         };
 
         this.notificationManager.scheduleNotification(attendanceNotification);
+        console.log(`✅ 정시 알림 예약됨 (${Math.round((reminder.attendanceCheckTime.getTime() - now.getTime()) / 1000 / 60)}분 후)`);
+        scheduledCount++;
+      } else {
+        console.log(`❌ 정시 알림 시간 지남`);
       }
     });
 
-    console.log(`📅 ${reminders.length * 2}개의 알림이 예약되었습니다.`);
+    console.log(`\n📅 총 ${scheduledCount}개의 알림이 예약되었습니다.`);
+    
+    if (scheduledCount === 0) {
+      console.log('⚠️ 예약된 알림이 없습니다. 테스트를 위해 5초 후 테스트 알림을 발송합니다.');
+      setTimeout(async () => {
+        await this.testNotificationNow({
+          name: '테스트 자동 알림',
+          room: '테스트 강의실',
+          professor: '시스템'
+        });
+      }, 5000);
+    }
   }
 
   clearAllScheduledNotifications(): void {
